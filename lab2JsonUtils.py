@@ -71,7 +71,7 @@ class ConfigAndResults:
 
   def toString (self):
     # print ("here in toString")
-    # no need too much precision , round the values of the floats 
+    # do not  need too much precision , round the values of the floats 
     selfDict = round_floats(self.__dict__)
     selfNT = namedtuple("selfNT", selfDict.keys())(*selfDict.values())
     
@@ -110,7 +110,7 @@ def getMaxValAcc (someNamedTuple):
           # print ( " max : val_acc[%d]  == %f" %( indMaxVal , maxVal ) )
           return maxVal , indMaxVal , len(theValues)
       if not   foundval_acc : 
-          print ("doSomeTest val_acc not found  " )
+          # print ("getMaxValAcc()  , val_acc not found  " )
           return None  , None , None 
 
     except Exception as e:
@@ -154,26 +154,71 @@ def getMinValLoss (someNamedTuple):
 
 
 ##################################################### function sortArr ()
-# sort the array of dictionnary  in reverse order using the testAccuracy as a criteria for sorting
+# sort the array of dictionnary  in reverse order using 
+# there may be one  loss or two values   (loss and accuracy ) 
+#  sort by  one of the possible value
 
-def sortArr (theTests):
+# the loss or accuracy will be the  criteria for sorting
+
+def sortArr (theTests , sortByAcc = False):
   # print ("\n\n sortArr")
   ii=0
-  valArr=[]
+  testArr=[]
   for someDict in theTests :
-    valArr.append(someDict['testRes'][1])
+    # print ("DEBUG sortArr()  " , type(someDict['testRes'])  )
+    if ( isinstance (someDict['testRes']  , list )) : 
+      if (sortByAcc):
+        testArr.append(someDict['testRes'][1])
+      else :
+        testArr.append(someDict['testRes'][0])
+    else:
+      # someDict['testRes'] is a scalar can I just hope that is is the  loss
+      testArr.append(someDict['testRes'])
 
-  theNpArr = np.array(valArr)  
+  # print ("DEBUG sortArr() ")
+
+  theNpArr = np.array(testArr)  
   theArgSortArr =  np.argsort(theNpArr)
   reverseSortedIndArr  = np.flip (theArgSortArr , 0) 
 
   # create a new arr of resulted sorted  (inverse order )by the value of testRes
   sortedTestRes = []
   for theSortedInd in reverseSortedIndArr:
-    # print (theSortedInd)
+    # print ("DEBUG sortArr() " , theSortedInd)
     sortedTestRes.append  ( theTests [theSortedInd])
   return sortedTestRes  
 
+
+##################################################### function sortArrBy ()
+# sort the array of dictionnary  in reverse order using 
+# there may be one  loss or two values   (loss and accuracy ) 
+#  sort by  one of the possible value
+
+# the loss or accuracy will be the  criteria for sorting
+
+def sortArrBy (theTests , sortPar='timeStamp'):
+  print ("DEBUG sortArrBy")
+  ii=0
+  testArr=[]
+  try:
+    for someDict in theTests :
+      # print ("DEBUG sortArrBy()  " , type(someDict['testRes'])  )
+      testArr.append(someDict[sortPar])
+
+    # print ("DEBUG sortArrBy() ")
+
+    theNpArr = np.array(testArr)  
+    theArgSortArr =  np.argsort(theNpArr)
+    reverseSortedIndArr  = np.flip (theArgSortArr , 0) 
+
+    # create a new arr of resulted sorted  (inverse order )by the value of testRes
+    sortedTestRes = []
+    for theSortedInd in reverseSortedIndArr:
+      # print ("DEBUG sortArrBy() " , theSortedInd)
+      sortedTestRes.append  ( theTests [theSortedInd])
+    return sortedTestRes  
+  except Exception as e:
+      print ("\n********** sortArrBy() fatal error: " , str(e))
 
 
 
@@ -216,8 +261,8 @@ def plotHist (someNamedTuple ):
 
   try : 
     theHistDict = someNamedTuple.histDict
-    theTitle  = someNamedTuple.codeRef + ", " +someNamedTuple.modelStruct +\
-            ", "         + someNamedTuple.info
+    theTitle  = someNamedTuple.timeStamp + ", " +someNamedTuple.modelStruct +\
+               "\n" + someNamedTuple.compInfo + ", "         + someNamedTuple.info
 
     if not isinstance (theHistDict, dict) :
       print ("\n**** plotHist() failure expecting a dict and got: %s"  % (type(theHistDict)) )
@@ -227,34 +272,61 @@ def plotHist (someNamedTuple ):
     ii=0
     
     # try to plot acc
-    ax = plt.subplot(2, 1, 1)
-    ax.set_title(theTitle)
+    # figure must be declared first , will create new figure for each plot
+    """
+    plt.figure(num=)
+    num : integer or string, optional, default: None
+    If not provided, a new figure will be created, and the figure number will be incremented. 
+    The figure objects holds this number in a number attribute. If num is provided, 
+    and a figure     with this id already exists, make it active, and returns a reference to it.
+    If this figure does not exists, create it and returns it. 
+    If num is a string,  the window title will be set to this figure's num.
+"""
+    plt.figure()
+
+    # sometimes there is no accuray in the data in this case there will be only one subplot
+    foundAcc=False
     for ki in theHistDict.keys():
       if ki.find('acc') != -1 :
-        # print(ki)
-        theValues = theHistDict[ki]
-        #print ("\n\n type(theValues ) "  , type(theValues ) , "---> " , theValues)
-        epochs = range(1, len(theValues) + 1)
-        plt.plot(epochs, theValues, symbols[ii%2], label=ki)
-        plt.xlabel('Epochs')
-        plt.ylabel('acc')
-        ii+=1
-    if (ii != 0 ):    
-      plt.legend()
-    
-    ax = plt.subplot(2, 1, 2)
+        foundAcc=True
+        nbOfRows=2
+    if not foundAcc :
+      # print ("plotHist()  no accuracy ")
+      nbOfRows=1
+
+    # first plot is the loss
+    ax = plt.subplot(nbOfRows, 1, 1)
+    ax.set_title(theTitle)
     jj= 0
     for ki in theHistDict.keys():
       if ki.find('loss') != -1 :
-        # print(ki)
-        theValues = theHistDict[ki]
-        epochs = range(1, len(theValues) + 1)
-        plt.plot(epochs, theValues, symbols[jj%2], label=ki)
-        plt.xlabel('Epochs')
-        plt.ylabel('loss')
-        jj+=1
-    if (jj != 0 ):    
-      plt.legend()
+          # print(ki)
+          theValues = theHistDict[ki]
+          epochs = range(1, len(theValues) + 1)
+          plt.plot(epochs, theValues, symbols[jj%2], label=ki)
+          plt.xlabel('Epochs')
+          plt.ylabel('loss')
+          jj+=1
+      if (jj != 0 ):    
+        plt.legend()
+
+    # if there was acc plot it in the second plot
+
+    if (foundAcc) :
+      ax = plt.subplot(nbOfRows, 1, 2)
+      for ki in theHistDict.keys():
+        if ki.find('acc') != -1 :
+          # print(ki)
+          theValues = theHistDict[ki]
+          #print ("\n\n type(theValues ) "  , type(theValues ) , "---> " , theValues)
+          epochs = range(1, len(theValues) + 1)
+          plt.plot(epochs, theValues, symbols[ii%2], label=ki)
+          plt.xlabel('Epochs')
+          plt.ylabel('acc')
+          ii+=1
+      if (ii != 0 ):    
+        plt.legend()
+    
           
     # strange that you need to change hspace  and not wspace
     # to get  space enouth to see the tite of the second plot
@@ -264,7 +336,7 @@ def plotHist (someNamedTuple ):
     if (ii == 0 and jj== 0 ) :
       print ("plotHist() failure  there was neither acc or loss to plot ")
     else:
-     plt.show()
+     plt.show(block=False)
       
   except Exception as e:
     print ("\n********** plotHist() fatal error: " , str(e))
@@ -298,7 +370,7 @@ def printAllFromFile (theDumpFileName , sorted=False):
 ################################################### function  printHeadersFromFile(...)
 # read dump file and print part of each dump 
 # remember that the results are all dictionnaries
-# possibility to sort the array of dictionnary  in reverse order 
+# possibility to sort the array of dictionnary  with highest test_acc first
 # using the testAccuracy as a criteria for sorting
 
 def printHeadersFromFile (theDumpFileName , sorted=False):
@@ -307,11 +379,13 @@ def printHeadersFromFile (theDumpFileName , sorted=False):
     theTests = readAllFromFile (theDumpFileName)
     if (sorted):
       theArr=sortArr(theTests)
+      print ("DEBUG printHeadersFromFile  ()")
     else:
       theArr=theTests
 
     ii=0
     print(" indice <codeRef> timeStample, modelStruct, info "  )
+    # print val_loss instead of val_acc because there may be no accuracy  in this case
     #print("test[loss,acc] <--> max (val_acc) at i/nb epochs:\n")
     print("test[loss,acc] <--> min (val_loss) at i/nb epochs:\n")
 
@@ -322,15 +396,19 @@ def printHeadersFromFile (theDumpFileName , sorted=False):
       # retrieve the best val accuracy  
 
       maxVal , indMaxVal , nbOfEpochs = getMaxValAcc(someNT)
+      """
+      print(" %2d <%s> %s,  %s, %s %s %s"  % 
+      (ii, someNT.codeRef ,someNT.timeStamp , someNT.modelStruct , someNT.compInfo , someNT.info ) )
+      """    
+      print(" %2d  <%s>,  %s, %s %s "  % 
+      (ii, someNT.timeStamp , someNT.modelStruct , someNT.compInfo , someNT.info ) )
 
-      print(" %2d <%s> %s,  %s, %s" % 
-      (ii, someNT.codeRef ,someNT.timeStamp , someNT.modelStruct , someNT.info ) )
 
       if (maxVal) :
         print(" %s <--> %s at %d/%d:\n" % 
         ( someNT.testRes  , maxVal , indMaxVal , nbOfEpochs ) )
       else:
-        # print loss instead 
+        # print val_loss instead of val_acc
         minVal , indMinVal , nbOfEpochs = getMinValLoss(someNT)
         print(" %s <--> %s at %d/%d:\n" % 
         ( someNT.testRes  , minVal , indMinVal , nbOfEpochs ) )
@@ -488,26 +566,26 @@ def doProceedUserInput (theDumpFileName):
   # rawinput no data conversion
   myPrompt = "\nindStr [moreStr] > " 
   print(myPrompt, end=' ')
-
+  doPrintSummary =False
   try:
     theUserInfo ="""
       explore the content of the dumpfile %s
       if indStr== s     summary : print list of all records  in the file
-      if indStr== o     ordered summary , best results first
+      if indStr== o     ordered summary , highest test loss first
       if indStr ==e     exit the Pgm
+      if indStr =tt	test test plot all losses 
       if indStr== valid record indice       print part of the record
       if indStr==validindice and moreStr==a   print the record 
       if indStr==validindice and moreStr==p   print part of the record and plot the history
       """ % ( theDumpFileName)
 
     userStr= input()
-    print ("...%s..." % userStr)
+    #print ("...%s..." % userStr)
     if (userStr == "" or userStr.lower().find('h') != -1 or 
              userStr.lower().strip().find('?') != -1 ):
     
-      # print ( theUserInfo)
+      print ( theUserInfo)
       return   
-    doPrintSummary =False
     if (userStr.lower().strip().find('o') == 0 ):
       # the user ask to see a summary of all records in the dumpfile
       sortFlg = True
@@ -521,6 +599,12 @@ def doProceedUserInput (theDumpFileName):
     if (userStr.lower().find('e') == 0 ):
       print ("doProceedUserInput() exit")
       sys.exit(1)
+    if (userStr.lower().find('tt') != -1  ):
+      # 20190412 TEST TEST plot all losses    
+      theArr = readAllFromFile (theDumpFileName)
+      plotLosses(theArr)
+      return
+
 
     try:
       indStr , inputStr =  userStr.split()
@@ -572,6 +656,134 @@ def doProceedUserInput (theDumpFileName):
 
 
 
+################################################### function plotLosses (...)
+  # plot se serie of loss curves 
+  # given an array of  namedTuples
+  # each namedTulpe  representing an instance of  ConfigAndResults
+
+def plotLosses (someDictArr ):
+
+
+
+  
+  if ( not isinstance ( someDictArr , list )):
+    print ("plotLosses()  FATAL parameter should be a list ")
+    return 
+
+
+
+
+  nbOfPlots=len (someDictArr)
+  print ("DEBUG plotLosses()  nbofPlots :  " , nbOfPlots)
+  plotInd = 1 
+  foundSomeLoss = False
+  # figure must be declared first , will create new figure for each plot
+  plt.figure()
+
+
+  for someDict in someDictArr :
+    # use named tuple to access the dict as it would be real instance of ConfigAndResults 
+    someNamedTuple = namedtuple("SomeNT", someDict.keys())(*someDict.values())
+
+
+    foundSomeLoss = False
+
+    try : 
+      theHistDict = someNamedTuple.histDict
+      theTitle  = someNamedTuple.timeStamp + ", " +someNamedTuple.modelStruct +\
+                 "\n" + someNamedTuple.compInfo + ", "         + someNamedTuple.info
+  
+      if not isinstance (theHistDict, dict) :
+        print ("\n**** plotHist() failure expecting a dict and got: %s"  % (type(theHistDict)) )
+        return 
+  
+      symbols = ['b' , 'bo']
+      # plot  the loss
+      ax = plt.subplot(nbOfPlots ,1, plotInd)
+      ax.set_title(theTitle)
+      jj= 0
+      for ki in theHistDict.keys():
+        if ki.find('loss') != -1 :
+            # print(ki)
+            theValues = theHistDict[ki]
+            epochs = range(1, len(theValues) + 1)
+            plt.plot(epochs, theValues, symbols[jj%2], label=ki)
+            plt.xlabel('Epochs')
+            plt.ylabel('loss')
+            foundSomeLoss = True
+            jj+=1
+        if (foundSomeLoss ):    
+          plt.legend()
+  
+            
+      # strange that you need to change hspace  and not wspace
+      # to get  space enouth to see the tite of the second plot
+      plt.subplots_adjust(hspace = 0.5)
+      
+  
+        
+      plotInd+=1
+    except Exception as e:
+      print ("\n********** plotLosses() fatal error: " , str(e))
+    
+
+    # after for loop
+    if ( not foundSomeLoss ) :
+        print ("plotLosses() TODO  foundSomeLoss  False")
+    else:
+       pass
+    plt.show(block=False)
+
+  
+  
+################################################### function createNewFile
+# create file withotu two timeStamp equal
+
+import re
+def createNewFile(theDumpFileName ,  newFileName):
+  try : 
+    if (not os.path.isfile(theDumpFileName)):
+      print("readAndCleanFile(), FATAL error %s is not a file"  %  ( theDumpFileName ) )
+      return
+
+    theArr = []
+    # now open a file for reading
+    filePtr2 = open(theDumpFileName, 'r')
+    i0=0
+    for line in filePtr2 :
+      for match in re.finditer('}{', line):
+        seg= line[i0: match.start() ] 
+        print ("\n" , seg)
+        i0=match.start()
+    print ("\n\n" , line[i0:  ] )
+
+    # print ("\n" , line)
+
+    # print timeStamp 
+
+    return 
+    filePtr3 = open(newFileName, 'w')
+
+    document = filePtr2.read()
+    # print (document)
+
+    for obj in decode_stacked(document):
+      theArr.append(obj)
+
+    # close the file, just for safety
+    filePtr2.close()
+    return theArr
+
+  except Exception as e:
+    print ("\n********** readAndCleanFile() fatal error " % (theDumpFileName , str(e)))
+
+
+
+
+  
+  
+
+
 ############################################### main 
 #  test create an object and  dump it in the benchmark
 
@@ -588,27 +800,38 @@ if __name__ == "__main__":
     dummyObj = ConfigAndResults ('dummyinfo' , "dummy compilering info", 
         dummyHist ,  dummyParams,
     datetime.datetime.now().strftime("%d%m at %H:%M:%S") )
-    print  ("TEST TEST wil ltry to dump dummy object :%s" % (dummyObj)  )
+    print  ("TEST TEST will try to dump dummy object :%s" % (dummyObj)  )
 
     dumpOnFile (dummyObj , theDummyDumpName)
 
 
   doTestSorting=True
-  theDummyDumpName = "../repo/results.json"
+  theDummyDumpName = ""
+  theDummyDumpName = "res1104.json"
+
   # printAllFromFile(theDummyDumpName)
+
+  createNewFile(theDummyDumpName ,  'sotired.txt')
+
+  sys.exit(1)
 
   if (doTestSorting):
     print ("\n\n present the results  sorted by  some criteria  ")
     theTests = readAllFromFile (theDummyDumpName)
-    sortedTestRes = sortArr2 (theTests)
+    sortedTestRes = sortArrBy (theTests)
   
     print ("list of results sorted by  test accuracy , (inverse order))")
     ii=0
     for someDict in sortedTestRes :
       someNT = namedtuple("SomeNT", someDict.keys())(*someDict.values())
       # someNT.testRes is a list [loss ,acc] so the 2 el is the acc
+      """
       print ("%d %f  %s  %s" % (ii , someNT.testRes[1] , 
       someNT.codeRef , someNT.modelStruct ))
+      """  
+      print ("%d %s  %s  %s %s" % (ii , someNT.timeStamp ,  someNT.modelStruct ,
+        someNT.compInfo ,  someNT.info , ))
+
       ii+=1
 
 
@@ -616,7 +839,7 @@ if __name__ == "__main__":
 
   doSomeTest=False
   if (doSomeTest):
-    theDummyDumpName = "../repo/results.json"
+    theDummyDumpName = "res1004.json"
     someRes = getOneResFromFile (theDummyDumpName  , ind=0)
     print ("testing  getMaxValAcc:  " , getMaxValAcc (someRes) )    
 
