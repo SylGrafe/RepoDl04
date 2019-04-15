@@ -1,3 +1,4 @@
+  
 #!/usr/bin/env python
 # coding: utf-8
 # from 6.3-advanced-usage-of-recurrent-neural-networks.py
@@ -58,6 +59,7 @@ def initData (doRunLocal=True):
 
     fname = os.path.join(data_dir, theWeatherDataFilename)
     # create the nb arrays
+    print ("DEBUG initData() fname" , fname )
     getData ()
 
     if tryTPU:
@@ -161,9 +163,10 @@ def generator(data, lookback, delay, min_index, max_index,
 
 
 
+
 ######################### abstract function rawIndGen ()
 # generate the ind corresponding to the reference data in one sample
-def rawIndGen (data, lookback, delay, min_index, max_index,
+def rawIndGenOLD (data, lookback, delay, min_index, max_index,
               shuffle=False, batch_size=128, step=6):
 
 
@@ -190,6 +193,44 @@ def rawIndGen (data, lookback, delay, min_index, max_index,
             targets[j] = data[rows[j] + delay][1]
         yield rows[j]
 
+
+        
+######################### abstract function NewNewNew ()
+# generate the ind corresponding to the oldest data from one batch
+def rawIndGen (data, lookback, delay, min_index, max_index,
+              shuffle=False, batch_size=128, step=6):
+
+
+    if max_index is None:
+        max_index = len(data) - delay - 1
+    i = min_index + lookback
+    while 1:
+        if shuffle:
+            rows = np.random.randint(
+                min_index + lookback, max_index, size=batch_size)
+        else:
+            if i + batch_size >= max_index:
+                i = min_index + lookback
+            rows = np.arange(i, min(i + batch_size, max_index))
+            i += len(rows)
+        yield rows[-1]
+
+# generate the indices corresponding to the testgen
+def getTestNEWNEWNEW ():
+  float_data = getData ()
+
+  test_rawIndGen = NewNewNew (float_data,
+                     lookback=lookback,
+                     delay=timeAhead,
+                     min_index=300001,
+                     max_index=None,
+                     step=selInterval,
+                     batch_size=batch_size)
+
+  return test_rawIndGen
+        
+        
+        
 
 # calculate real temperatures using std and mean 
 def realTemp (temp):
@@ -390,7 +431,131 @@ def getOneFloatData ( rawInd ):
   else:
     return float_data[rawInd]
     return dateStr
+  
+  
 
+# read some selected lines from the file
+# retruns the dates and temp and tempaHead extracted from theses lines
+def readValuesFromFile (indArr , offset):
+
+    readTempArr = [] 
+    readDateArr=[]
+    tempAheadArr = [] 
+    aheadInterval=144
+    print ("readValuesFromFile () will read " , fname)
+    f = open(fname)
+    data = f.read()
+    f.close()
+
+    lines = data.split('\n')
+    header = lines[0].split(',')
+    lines = lines[1:]
+    ik = 0 
+    aHeadInd = -1
+    for ij, line in enumerate(lines):
+      if ik < len(indArr) and ij == (indArr[ik] + offset): 
+        #print ("DEBUG readValuesFromFile found " , ij , end='-> ' )
+        aHeadInd=indArr[ik] + offset +aheadInterval
+        lineArr= line.split(',')
+        readTemp=float(lineArr[2])
+        readDate =  lineArr[0]
+        readTempArr.append(readTemp)  
+        readDateArr.append(readDate)  
+        ik+=1
+      # fetch the value one day ahead of the latest value in tempArr  
+      if  aHeadInd > -1 and ij == aHeadInd: 
+        #print ("DEBUG ahead " , ij)
+        lineArr= line.split(',')
+        readTemp=float(lineArr[2])
+        tempAheadArr.append(readTemp)  
+    
+    
+      if (ij > indArr[-1] + offset + aheadInterval + 2):
+        # print ("DEBUG break att" , ij )
+        break
+      
+    return  readDateArr , readTempArr , tempAheadArr
+
+
+  
+
+
+######################################################################
+############### main for test only
+######################################################################
+
+
+
+if __name__ == "__main__":
+
+
+
+  import keras
+  keras.__version__
+
+  from keras import layers
+  from keras import models
+  from keras.models import Sequential
+  from keras import layers
+  from keras.optimizers import RMSprop
+  
+  
+  initData (doRunLocal=False)
+
+  # choose indices that are multiple of batch_size  
+  indArr =  [0,128 ,256 , 384 , 512 ]
+  rawIndArr=[]
+  dateArr= []
+  ik=0
+  ij=0
+
+  # get the corresponding indices( in float_data  array ) from  testRawIndGen
+
+  for rawInd in getTestRawIndGen():
+    # print ("%d %d --> %d" % (ij , ik , rawInd))
+    if ik < len(indArr) and ij == indArr[ik]:
+      rawIndArr.append(rawInd)
+      dateArr.append(getOneDate ( rawInd ))      
+      ik+=1
+
+    ij +=1
+    if (ij > indArr[-1]):
+      break
+
+      
+  # get corresponding  temperature  from testGen
+  tempsFromLabelBatch= []
+  tempsFromDataBatch=[]
+  ik=0
+  ij=0
+
+  for data_batch, labels_batch  in getTestGen():
+    if ik < len(indArr) and ij == indArr[ik]:
+      tempsFromLabelBatch.append(labels_batch[0])
+      tempsFromDataBatch.append(data_batch[0][0][1])
+
+      ik+=1
+
+    ij +=1
+    if (ij > indArr[-1]):
+      break
+      
+
+  # read the values direcly from the file      
+  csvDates , csvTemp  = readValuesFromFile (rawIndArr  , -2) 
+
+  # make a nice print   
+  print ( "rawInd temps : Fromdata -> label \n  tempFloatData  \n date adn temp from csv")
+  for ijk in range(len(dateArr)):
+    print ( "\n%d  %d %s  %.2f -> %.2f" % ( 
+      ijk , rawIndArr[ijk] , dateArr[ijk] , 
+      realTemp(tempsFromDataBatch[ijk]) , realTemp(tempsFromLabelBatch[ijk])) )
+  
+    floatDataTemp =getOneFloatData (rawIndArr[ijk]) [1] 
+    print ("float_data --------->  %.2f" %   realTemp(floatDataTemp))
+    print ("csv --->     %s %.2f" %       ( csvDates[ijk] , csvTemp[ijk] ))
+  
+    
 
 
 
@@ -458,4 +623,4 @@ if __name__ == "__main__":
   plt.show()
   
   
-  
+
