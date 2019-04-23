@@ -20,6 +20,7 @@ from collections import namedtuple
 encoder.FLOAT_REPR = lambda o: format(o, '.4f')
 NOT_WHITESPACE = re.compile(r'[^\s]')
 sortFlg = False
+doSaveFig = True
 
 """
 Contains functions and the Class  ConfigAndResults meant to be used
@@ -190,14 +191,14 @@ def sortArr (theTests , sortByAcc = False):
 
 
 ##################################################### function sortArrBy ()
-# sort the array of dictionnary  in reverse order using 
-# there may be one  loss or two values   (loss and accuracy ) 
+# sort the array of dictionnary   using  sortPar as criteria
+# depending of  the value  of doInvert the results are presented in normal order or reverse order 
 #  sort by  one of the possible value
 
 # the loss or accuracy will be the  criteria for sorting
 
-def sortArrBy (theTests , sortPar='timeStamp'):
-  print ("DEBUG sortArrBy")
+def sortArrBy (theTests , sortPar='timeStamp' , doInvert=False):
+  print ("DEBUG sortArrBy () %s  doInvert:%s" % (sortPar , doInvert ))
   ii=0
   testArr=[]
   try:
@@ -209,11 +210,13 @@ def sortArrBy (theTests , sortPar='timeStamp'):
 
     theNpArr = np.array(testArr)  
     theArgSortArr =  np.argsort(theNpArr)
-    reverseSortedIndArr  = np.flip (theArgSortArr , 0) 
-
+    if (doInvert):
+      reverseSortedIndArr  = np.flip (theArgSortArr , 0) 
+      theArgSortArr =  reverseSortedIndArr
     # create a new arr of resulted sorted  (inverse order )by the value of testRes
     sortedTestRes = []
-    for theSortedInd in reverseSortedIndArr:
+    #    for theSortedInd in reverseSortedIndArr:
+    for theSortedInd in theArgSortArr:
       # print ("DEBUG sortArrBy() " , theSortedInd)
       sortedTestRes.append  ( theTests [theSortedInd])
     return sortedTestRes  
@@ -338,6 +341,9 @@ def plotHist (someNamedTuple ):
     else:
      plt.show(block=False)
       
+    if (doSaveFig):
+       theFigName  =  someNamedTuple.modelStruct + "_" + someNamedTuple.timeStamp + ".png"
+       plt.savefig (theFigName)
   except Exception as e:
     print ("\n********** plotHist() fatal error: " , str(e))
   
@@ -387,7 +393,7 @@ def printHeadersFromFile (theDumpFileName , sorted=False):
     print(" indice <codeRef> timeStample, modelStruct, info "  )
     # print val_loss instead of val_acc because there may be no accuracy  in this case
     #print("test[loss,acc] <--> max (val_acc) at i/nb epochs:\n")
-    print("test[loss,acc] <--> min (val_loss) at i/nb epochs:\n")
+    print("min (val_loss) at i/nb epochs ,............ test_loss  \n")
 
     for someDict in theArr:
     
@@ -410,8 +416,8 @@ def printHeadersFromFile (theDumpFileName , sorted=False):
       else:
         # print val_loss instead of val_acc
         minVal , indMinVal , nbOfEpochs = getMinValLoss(someNT)
-        print(" %s <--> %s at %d/%d:\n" % 
-        ( someNT.testRes  , minVal , indMinVal , nbOfEpochs ) )
+        print(" %s at %d/%d  ,.............. test: %s\n" % 
+        ( minVal , indMinVal , nbOfEpochs , someNT.testRes   ) )
 
 
 
@@ -428,7 +434,7 @@ def printHeadersFromFile (theDumpFileName , sorted=False):
 ################################################### function getOneResFromFile(...)
 # read in dumpfile the info about  the object referenced by refStr or ind
 # return as a namedtuple  the first instance found
-# the value of sorted should be the same as the one used for printHeadersFromFile
+# the value of the param sorted should be the same as the one used for printHeadersFromFile
 def getOneResFromFile (theDumpFileName , refStr= "" , ind=-1 , sorted=False ):
   try : 
     theTests = readAllFromFile (theDumpFileName)
@@ -736,51 +742,6 @@ def plotLosses (someDictArr ):
 
   
   
-################################################### function createNewFile
-# create file withotu two timeStamp equal
-
-import re
-def createNewFile(theDumpFileName ,  newFileName):
-  try : 
-    if (not os.path.isfile(theDumpFileName)):
-      print("readAndCleanFile(), FATAL error %s is not a file"  %  ( theDumpFileName ) )
-      return
-
-    theArr = []
-    # now open a file for reading
-    filePtr2 = open(theDumpFileName, 'r')
-    i0=0
-    for line in filePtr2 :
-      for match in re.finditer('}{', line):
-        seg= line[i0: match.start() ] 
-        print ("\n" , seg)
-        i0=match.start()
-    print ("\n\n" , line[i0:  ] )
-
-    # print ("\n" , line)
-
-    # print timeStamp 
-
-    return 
-    filePtr3 = open(newFileName, 'w')
-
-    document = filePtr2.read()
-    # print (document)
-
-    for obj in decode_stacked(document):
-      theArr.append(obj)
-
-    # close the file, just for safety
-    filePtr2.close()
-    return theArr
-
-  except Exception as e:
-    print ("\n********** readAndCleanFile() fatal error " % (theDumpFileName , str(e)))
-
-
-
-
-  
   
 
 
@@ -789,34 +750,15 @@ def createNewFile(theDumpFileName ,  newFileName):
 
 
 if __name__ == "__main__":
-
-  doDump=False
-  theDummyDumpName = "dummy.json"
+  #print ("DEBUG here in main ()")
 
 
-  if doDump:
-    dummyHist={'h1':"dummy" , 'h2':"dummy"}
-    dummyParams={'p1':"dummy" , 'p2':"dummy"}
-    dummyObj = ConfigAndResults ('dummyinfo' , "dummy compilering info", 
-        dummyHist ,  dummyParams,
-    datetime.datetime.now().strftime("%d%m at %H:%M:%S") )
-    print  ("TEST TEST will try to dump dummy object :%s" % (dummyObj)  )
-
-    dumpOnFile (dummyObj , theDummyDumpName)
-
-
-  doTestSorting=True
-  theDummyDumpName = ""
-  theDummyDumpName = "res1104.json"
-
-  # printAllFromFile(theDummyDumpName)
-
-  createNewFile(theDummyDumpName ,  'sotired.txt')
-
-  sys.exit(1)
+  doTestSorting=False
+  theDummyDumpName = "../local/testAll.json"
+  theDummyDumpName = "../local/res1504NEW.json"
 
   if (doTestSorting):
-    print ("\n\n present the results  sorted by  some criteria  ")
+    print ("Sorts results in  %s "%(theDummyDumpName ))
     theTests = readAllFromFile (theDummyDumpName)
     sortedTestRes = sortArrBy (theTests)
   
@@ -834,7 +776,16 @@ if __name__ == "__main__":
 
       ii+=1
 
+  doTestSelectTimestamp = True
+  if (doTestSelectTimestamp):
+    someTest = getOneResFromFile (theDummyDumpName , refStr= "1504_1730" )
+    print ("DEBUG doTestSelectTimestamp"  , someTest)
 
+    """
+    myPrompt = "\ntimeStamp > " 
+    print(myPrompt, end=' ')
+    doPrintSummary =False
+    """
 
 
   doSomeTest=False

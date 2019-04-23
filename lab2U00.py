@@ -136,8 +136,6 @@ def getData ():
 def generator(data, lookback, delay, min_index, max_index,
               shuffle=False, batch_size=128, step=6):
 
-
-
     if max_index is None:
         max_index = len(data) - delay - 1
     i = min_index + lookback
@@ -148,6 +146,7 @@ def generator(data, lookback, delay, min_index, max_index,
         else:
             if i + batch_size >= max_index:
                 i = min_index + lookback
+                
             rows = np.arange(i, min(i + batch_size, max_index))
             i += len(rows)
 
@@ -159,39 +158,12 @@ def generator(data, lookback, delay, min_index, max_index,
             indices = range(rows[j] - lookback, rows[j], step)
             samples[j] = data[indices]
             targets[j] = data[rows[j] + delay][1]
+        # the highest indices of sampel to be yield is indices[-1]
+        # because of the steps is may differ with rows[-1]
+        # but last  target in a batch  will always be found at rows[-1] + delay]
         yield samples, targets
 
 
-
-
-######################### abstract function rawIndGen ()
-# generate the ind corresponding to the reference data in one sample
-def rawIndGenOLD (data, lookback, delay, min_index, max_index,
-              shuffle=False, batch_size=128, step=6):
-
-
-    if max_index is None:
-        max_index = len(data) - delay - 1
-    i = min_index + lookback
-    while 1:
-        if shuffle:
-            rows = np.random.randint(
-                min_index + lookback, max_index, size=batch_size)
-        else:
-            if i + batch_size >= max_index:
-                i = min_index + lookback
-            rows = np.arange(i, min(i + batch_size, max_index))
-            i += len(rows)
-
-        samples = np.zeros((len(rows),
-                           lookback // step,
-                           data.shape[-1]))
-        targets = np.zeros((len(rows),))
-        for j, row in enumerate(rows):
-            indices = range(rows[j] - lookback, rows[j], step)
-            samples[j] = data[indices]
-            targets[j] = data[rows[j] + delay][1]
-        yield rows[j]
 
 
         
@@ -200,7 +172,6 @@ def rawIndGenOLD (data, lookback, delay, min_index, max_index,
 def rawIndGen (data, lookback, delay, min_index, max_index,
               shuffle=False, batch_size=128, step=6):
 
-
     if max_index is None:
         max_index = len(data) - delay - 1
     i = min_index + lookback
@@ -211,25 +182,14 @@ def rawIndGen (data, lookback, delay, min_index, max_index,
         else:
             if i + batch_size >= max_index:
                 i = min_index + lookback
+            # rows is an array of length batch_size
+            # each el is increase by one compare to the previous element
             rows = np.arange(i, min(i + batch_size, max_index))
             i += len(rows)
+        # I really  hope that  rows[-1] about the highest indice 
+        #  samples yield by the  generator at each batch
         yield rows[-1]
 
-# generate the indices corresponding to the testgen
-def getTestNEWNEWNEW ():
-  float_data = getData ()
-
-  test_rawIndGen = NewNewNew (float_data,
-                     lookback=lookback,
-                     delay=timeAhead,
-                     min_index=300001,
-                     max_index=None,
-                     step=selInterval,
-                     batch_size=batch_size)
-
-  return test_rawIndGen
-        
-        
         
 
 # calculate real temperatures using std and mean 
@@ -606,7 +566,7 @@ if __name__ == "__main__":
                                 validation_steps=getValSteps())
   
   
-  import matplotlib.pyplot as plt
+  import matplotlib.pyplot as pltH
   
   loss = history.history['loss']
   val_loss = history.history['val_loss']

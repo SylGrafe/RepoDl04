@@ -24,7 +24,8 @@ from tensorflow.python.keras.layers import Input, LSTM, GRU , Bidirectional, Den
 
 
 
-######################### function makeGRUGRUModel ()
+######################### function makeGGDDModel ()
+# 2 gru layers   with dropout=0.1 ,  and recurrent_dropout = 0.5  , 2 dense layers 
 def makeGGDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=64 ,
                   d1=32,d2=64 ):
     source = Input(shape=(TSLen, nbOfFeat),
@@ -50,7 +51,44 @@ def makeGGDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=6
 
 
 
-  ######################### function 
+######################### function makeGGGDDModel ()
+# 3 gru layers   with dropout=0.1 ,  and recurrent_dropout = 0.5 ,
+#  2 dense layers  more than the dense layer for predicted_var
+def makeGGGDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=64 ,u3=64 ,
+                  d1=32,d2=64 ):
+    source = Input(shape=(TSLen, nbOfFeat),
+                   batch_size=batch_size,
+                   dtype=tf.float32, name='Input')
+    gru1 = GRU(u1, name='GRU1' ,
+         dropout=0.1,  recurrent_dropout=0.5, 
+               return_sequences=True )(source)
+    gru2 = GRU(u2, name='GRU2',
+               dropout=0.1,  recurrent_dropout=0.5 ,return_sequences=True  )(gru1)
+
+    gru3 = GRU(u3, name='GRU3',
+               dropout=0.1,  recurrent_dropout=0.5  )(gru2)
+    
+    dense1 = Dense(d1, name='Dense1')(gru3)
+    dense2 = Dense(d2, name='Dense2')(dense1)
+
+    predicted_var = Dense(1, name='Output')(dense2)
+    
+    model = tf.keras.Model(inputs=[source], outputs=[predicted_var])
+    model.compile(
+        optimizer=tf.train.RMSPropOptimizer(learning_rate=lrPar),
+        loss='mae' )
+        
+    return model
+
+
+
+
+
+
+
+######################### function 
+# 2 lstm  layers  with dropout=0.1 ,  and recurrent_dropout = 0.5 ,
+#  2 dense layers more than the dense layer for predicted_var
 def makeLLDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=64 ,
                   d1=32,d2=64 ):
     source = Input(shape=(TSLen, nbOfFeat),
@@ -82,6 +120,9 @@ def makeLLDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=6
 
 ######################### function makeGRUGRUModel ()
 def makeGRUGRUModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32, u2=64, d1=1 ):
+# 2 gru layers   with dropout=0.1 ,  and recurrent_dropout = 0.5  ,
+#  max one extra dense layers  more than the dense layer for predicted_var
+
     source = Input(shape=(TSLen, nbOfFeat),
                    batch_size=batch_size,
                    dtype=tf.float32, name='Input')
@@ -109,32 +150,12 @@ def makeGRUGRUModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32, u2=
 
 
 
-######################### function makeGRUGRUModel ()
-def makeGRUGRUModelOLD(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=64 , d1=1 ):
-    source = Input(shape=(TSLen, nbOfFeat),
-                   batch_size=batch_size,
-                   dtype=tf.float32, name='Input')
-    gru1 = GRU(u1, name='GRU1' ,
-         dropout=0.1,  recurrent_dropout=0.5, 
-               return_sequences=True )(source)
-    gru2 = GRU(u2, name='GRU2',
-               dropout=0.1,  recurrent_dropout=0.5  )(gru1)
-    
-    predicted_var = Dense(d1, name='Output')(gru2)
-    model = tf.keras.Model(inputs=[source], outputs=[predicted_var])
-    model.compile(
-        optimizer=tf.train.RMSPropOptimizer(learning_rate=lrPar),
-        loss='mae' )
-        
-    return model
-
-
-
-
 
 
 ######################### function makeGRU2Model ()
 def makeGRU2Model(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001):
+# 3 gru layers with dropout=0.1 ,  and recurrent_dropout = 0.5 ,
+# the first gru has always  32 unit and one second  gru has always  64 units
     source = Input(shape=(TSLen, nbOfFeat),
                    batch_size=batch_size,
                    dtype=tf.float32, name='Input')
@@ -173,8 +194,9 @@ def makeGRU1Model(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001):
 
 
 
+
 ######################### function makeDenseModel ()
-# simple dense model
+# simple dense model one layers with 32 units 
 def makeDenseModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001):
     """
 Create the model , You must pass in an input shape and batch size as TPUs
@@ -198,6 +220,8 @@ Create the model , You must pass in an input shape and batch size as TPUs
   
 ######################### function makeLSTMLSTMModel ()
 def makeLSTMLSTMModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=64 ):
+# 2 lstm layers  with dropout=0.1 ,  and recurrent_dropout = 0.5 
+
     source = Input(shape=(TSLen, nbOfFeat),
                    batch_size=batch_size,
                    dtype=tf.float32, name='Input')
@@ -244,7 +268,7 @@ if __name__ == "__main__":
   nbOfFeat1 = lab2U00.getFeatNb()
 
   # create a model
-  modelStruct="lstmlstm"
+  modelStruct="gggdd"
   if modelStruct == "dense":    
       model=makeDenseModel (tSLen1 , nbOfFeat1, batch_size = inputBS, lrPar=myLr )
   elif modelStruct == "gru1":    
@@ -268,6 +292,11 @@ if __name__ == "__main__":
       model=makeLSTMLSTMModel (tSLen1 , nbOfFeat1, batch_size = inputBS,  
           lrPar=myLr , u1=myUnits1 , u2=myUnits2)
       infoStr="u:%d,%d " % (myUnits1 , myUnits2  )
+  elif modelStruct == "gggdd":  
+    myU3=64
+    model=makeGGGDDModel (tSLen1 , nbOfFeat1, batch_size = inputBS,  
+        lrPar=myLr , u1=myUnits1 , u2=myUnits2 ,u3=myU3 , d2=myD2 ,  d1=myD1)
+    infoStr="u:%d,%d,%d , d:%d,%d " %    (myUnits1 , myUnits2, myU3,  myD1 , myD2)    
   
       
   else:  
