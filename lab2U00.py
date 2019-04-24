@@ -1,8 +1,8 @@
-  
 #!/usr/bin/env python
 # coding: utf-8
+# sygr0003 , UMU54907 , VT2019 , lab2 weather predictions
 # from 6.3-advanced-usage-of-recurrent-neural-networks.py
-#  study data  + run simply fully-connected model  and evaluate_naive_method ()
+# read data , preprocess the data and create generators
 import os
 from matplotlib import pyplot as plt
 import numpy as np
@@ -11,7 +11,7 @@ import time
 import datetime
 
 
-################# global data to be set later by the functions 
+################# global data most of them to be set by  some  function
 float_data =None # the data wil lbe normalized
 lookback = None # related to the lenth of the timesequence
 selInterval = None  # use to select part of the raw data
@@ -24,6 +24,7 @@ theStd = 0 # the standart variation used for the normalisation f the temperature
 theWeatherDataFilename = 'jena_climate_2009_2016.csv'
 fname = "" # full path to theWeatherDataFilename depends of the environment (local or colab)
 
+rawIndTest0 = None
 
 """
 contain of one line 
@@ -37,7 +38,7 @@ dateFmt = "%d.%m.%Y %H:%M:%S"
 
 
 
-###################################################################3
+#################################### functions ##############################
 ################################# function initData ()
 # must be called prior to calling  other  any functions
 # get the right path to the cvs file  contains the data
@@ -77,10 +78,9 @@ def initData (doRunLocal=True):
 
 
 
-############################ function getData
+############################ function getData ()
 # create the dataset from the content  of filename 
 # Let's convert the  420,551 lines of data into a Numpy array:
-# in pratical ony  "one of selInterval" line from the file is kept for calculcate the data 
 
 def getData ():
 
@@ -135,6 +135,8 @@ def getData ():
 ######################### abstract function generator ()
 def generator(data, lookback, delay, min_index, max_index,
               shuffle=False, batch_size=128, step=6):
+#  Remember that ony  "one of selInterval" line from the file is kept for building the data
+# in a timesteps see indices in the code
 
     if max_index is None:
         max_index = len(data) - delay - 1
@@ -167,8 +169,9 @@ def generator(data, lookback, delay, min_index, max_index,
 
 
         
-######################### abstract function NewNewNew ()
+######################### abstract function rawIndGen ()
 # generate the ind corresponding to the oldest data from one batch
+# TODO  20190424  verif not in use anymore
 def rawIndGen (data, lookback, delay, min_index, max_index,
               shuffle=False, batch_size=128, step=6):
 
@@ -199,6 +202,7 @@ def realTemp (temp):
 
 #########################  funtion getOneBatch ()
 # TEST TEST retrun one batch sample
+# TODO  20190424  verif not in use anymore
 def getOneBatch (  min_index, max_index,
               shuffle=False, batch_size=128 ):
 
@@ -233,8 +237,7 @@ def getOneBatch (  min_index, max_index,
 
 
 
-
-#################### functions to retrun the generators 
+########################  diverse functions 
 def getValSteps ():
   float_data = getData ()
   # This is how many steps to draw from `val_gen`
@@ -264,6 +267,7 @@ def getTSLen ():
 
 
 
+#################### functions to retrun the train , val and test generators 
 def getTrainGen ():
   float_data = getData ()
   train_gen = generator(float_data,
@@ -305,8 +309,53 @@ def getTestGen ():
   return test_gen
 
 
+#################### function genXYZ ()
+# define another generator to retrieve batches that do not  # always starts at min_index=300001 
+# theMinIndex  is a parameter to the generator
+# usefull for getting  specific  predictions 
+def getGenXYZ  (theMinIndex=300001):
+  float_data = getData ()
+
+  genXYZ =  generator(float_data,
+                     lookback=lookback,
+                     delay=timeAhead,
+                     min_index=theMinIndex,
+                     max_index=None,
+                     step=selInterval,
+                     batch_size=batch_size)
+
+  return genXYZ
+
+
+# rawInd corresponding to getGenXYZ
+def getRawIndGenXYZ ( theMinIndex=300001):
+# TODO 20190424 verif that it is not in use anymore
+  float_data = getData ()
+
+  rawInd_genXYZ = rawIndGen (float_data,
+                     lookback=lookback,
+                     delay=timeAhead,
+                     min_index=theMinIndex,
+                     max_index=None,
+                     step=selInterval,
+                     batch_size=batch_size)
+
+  return rawInd_genXYZ
+
+
+###############################3 functions getIndices
+def getIndiceXYZ ( min_index , batchNb ):
+# retruns the indice of the first target yield by  getGenXYZ () for batchNb
+
+  firstTargetInd = min_index + lookback + ( batchNb * batch_size)  + timeAhead
+  return firstTargetInd 
+
+
+
+
 # generate the indices corresponding to the testgen
 def getTestRawIndGen ():
+# TODO 20190424 verif that it is not in use anymore
   float_data = getData ()
 
   test_rawIndGen = rawIndGen (float_data,
@@ -393,11 +442,11 @@ def getOneFloatData ( rawInd ):
     return dateStr
   
   
-
+###################################### function readValues FromFile ()
 # read some selected lines from the file
 # retruns the dates and temp and tempaHead extracted from theses lines
 def readValuesFromFile (indArr , offset):
-
+# TODO  20190424  verif not in use anymore
     readTempArr = [] 
     readDateArr=[]
     tempAheadArr = [] 
@@ -438,6 +487,55 @@ def readValuesFromFile (indArr , offset):
 
 
   
+###################################### function readValues FromFile ()
+# read some selected lines from the file
+# retruns the dates and temp and tempaHead extracted from theses lines
+def readTempsInFile (startInd , bs, offset):
+
+    readTempArr = [] 
+    startDate=None
+    previousDayTempArr = [] 
+    aheadInterval=144
+    # print ("DEBUG readTempsInFile () will read " , fname)
+    f = open(fname)
+    data = f.read()
+    f.close()
+
+    lines = data.split('\n')
+    header = lines[0].split(',')
+    lines = lines[1:]
+    ik = 0 
+    ii=0  
+    aHeadInd = -1
+    for ij, line in enumerate(lines):
+      if  (ij == (startInd  + offset+ ik)  and ik< bs): 
+        if ij == 0 :
+          # print ("DEBUG readTempsInFile() found first readTemp at " , ij , end='-> ' )
+          pass
+        lineArr= line.split(',')
+        readTemp=float(lineArr[2])
+        readTempArr.append(readTemp)  
+        # retrieve the date of the first temp in the array
+        if ik == 0 :   
+          startDate =  lineArr[0]
+        ik+=1
+         
+      # fetch the values  one day before   
+      if  (ij == startInd  + offset+ ii  -aheadInterval  and ii< bs): 
+        if ii == 0: 
+          # print ("DEBUG readTempsInFile () found first previous temp at " , ij , end='-> ' )
+          pass
+        lineArr= line.split(',')
+        readTemp=float(lineArr[2])
+        previousDayTempArr.append(readTemp)  
+        ii+=1    
+    
+      if (ik > bs + 2):
+        # print ("DEBUG readtempsInfile () break att" , ij )
+        break
+      
+    return  startDate , readTempArr , previousDayTempArr
+
 
 
 ######################################################################
@@ -446,8 +544,8 @@ def readValuesFromFile (indArr , offset):
 
 
 
-if __name__ == "__main__":
-
+# if __name__ == "__main__":
+if False:
 
 
   import keras
@@ -522,8 +620,8 @@ if __name__ == "__main__":
 ######################################################################
 ############### main for test only
 ######################################################################
-if __name__ == "__main__":
 
+if False :
 
 
   import keras
@@ -551,36 +649,84 @@ if __name__ == "__main__":
   print ( "date [%d] : %s " % ( ii ,  getOneDate ( ii )  ))
 
 
+if __name__ == "__main__":
+
+    initData ()
+
+    # test getGenXYZ ()
+    print ("DEBUG DEBUG getGenXYZ ()")
+    myMinIndex=0
+    # get the data and labels from the test generator for the  choosenBatch batch
+    batchCounter=0
+    choosenBatch=0
+    for data_batch, labels_batch in  getGenXYZ  (theMinIndex=myMinIndex):
+      batchCounter+=1
+      if (batchCounter >= choosenBatch):
+        print ("DEBUG break getGenXYZ  after %d batches" % (batchCounter))
+        break
+
+    # get the corresponding rawInd    for this batch
+    firstTargetInd=  getIndiceXYZ ( myMinIndex , choosenBatch )
+    print ("firstTargetInd=%d" %  (firstTargetInd ) )
+
+    batchCounter=0
+    for rawInd in getRawIndGenXYZ (theMinIndex=myMinIndex):
+      batchCounter+=1
+      print (" %d--> %d" % ( batchCounter , rawInd))
+      if (batchCounter >= choosenBatch):
+        print ("DEBUG break getRawIndGenXYZ  after %d batches" %   (batchCounter))
+        print ( " minInd:%d  gave  rawInd: %d " % ( myMinIndex , rawInd) )
+        break
+
+    # retrieve the data from the file   
+    firstDate , csvTempDay2 , csvTempDay1 = readTempsInFile (firstTargetInd , 128,  -2)
+
   
-  model = Sequential()
-  model.add(layers.Flatten(input_shape=(lookback // selInterval, getFeatNb())))
-  model.add(layers.Dense(32, activation='relu'))
-  model.add(layers.Dense(1))
+
+    plt.figure(  figsize=(10, 8))
+    # plot the values from the csv file  
+    ax = plt.subplot(2, 1, 1)
   
-  model.compile(optimizer=RMSprop(), loss='mae')
-  print ("model.fit_generator () ")
-  history = model.fit_generator(getTrainGen () ,
+    plt.plot( csvTempDay1, 'b.', label='previous day')
+    plt.plot(csvTempDay2, color="black", label='day (same as true)')
+    theTitle ="naive model : read temp from csv file,  first stample at %s" %  (
+      firstDate  )
+    plt.title(theTitle)
+    plt.legend()
+  
+    plt.show()
+  
+
+if False:  
+    model = Sequential()
+    model.add(layers.Flatten(input_shape=(lookback // selInterval, getFeatNb())))
+    model.add(layers.Dense(32, activation='relu'))
+    model.add(layers.Dense(1))
+  
+    model.compile(optimizer=RMSprop(), loss='mae')
+    print ("model.fit_generator () ")
+    history = model.fit_generator(getTrainGen () ,
                                 steps_per_epoch=500,
                                 epochs=20,
                                 validation_data=getValGen(),
                                 validation_steps=getValSteps())
   
   
-  import matplotlib.pyplot as pltH
+    import matplotlib.pyplot as pltH
   
-  loss = history.history['loss']
-  val_loss = history.history['val_loss']
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
   
-  epochs = range(len(loss))
+    epochs = range(len(loss))
   
-  plt.figure()
+    plt.figure()
   
-  plt.plot(epochs, loss, 'bo', label='Training loss')
-  plt.plot(epochs, val_loss, 'b', label='Validation loss')
-  plt.title('Training and validation loss')
-  plt.legend()
+    plt.plot(epochs, loss, 'bo', label='Training loss')
+    plt.plot(epochs, val_loss, 'b', label='Validation loss')
+    plt.title('Training and validation loss')
+    plt.legend()
   
-  plt.show()
+    plt.show()
   
   
 

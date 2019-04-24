@@ -1,5 +1,6 @@
 #!/usr/bin/python3.5
-
+# sygr0003 , UMU54907 , VT2019 , lab2 weather predictions
+# functions and class to save information about models and fit  in json file
 import sys
 import os
 import sys
@@ -30,7 +31,7 @@ the functions are
 dump some results on disk 
 read  results from disk
 present a summary if  of the records 
-ask the user for a indice to retrive a given record from the list
+ask the user for a indice to retreive a given record from the list
 
 
 Remember 
@@ -385,7 +386,7 @@ def printHeadersFromFile (theDumpFileName , sorted=False):
     theTests = readAllFromFile (theDumpFileName)
     if (sorted):
       theArr=sortArr(theTests)
-      print ("DEBUG printHeadersFromFile  ()")
+      # print ("DEBUG printHeadersFromFile  ()")
     else:
       theArr=theTests
 
@@ -453,7 +454,7 @@ def getOneResFromFile (theDumpFileName , refStr= "" , ind=-1 , sorted=False ):
       # print ("DEBUG " , someNT)
       if (ii == ind or someNT.timeStamp == refStr ):
         foundRes=True
-        print (" %s got record for  %d" % (refStr , ii)) 
+        # print ("debug  %s got record for  %d" % (refStr , ii)) 
         return someNT
       ii+=1
 
@@ -577,9 +578,8 @@ def doProceedUserInput (theDumpFileName):
     theUserInfo ="""
       explore the content of the dumpfile %s
       if indStr== s     summary : print list of all records  in the file
-      if indStr== o     ordered summary , highest test loss first
+      if indStr== o     ordered summary , highest  min (val_loss)  first
       if indStr ==e     exit the Pgm
-      if indStr =tt	test test plot all losses 
       if indStr== valid record indice       print part of the record
       if indStr==validindice and moreStr==a   print the record 
       if indStr==validindice and moreStr==p   print part of the record and plot the history
@@ -668,8 +668,6 @@ def doProceedUserInput (theDumpFileName):
   # each namedTulpe  representing an instance of  ConfigAndResults
 
 def plotLosses (someDictArr ):
-
-
 
   
   if ( not isinstance ( someDictArr , list )):

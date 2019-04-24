@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# create models
+# sygr0003 , UMU54907 , VT2019 , lab2 weather predictions
+# create models  
 import sys
 import keras
 keras.__version__
@@ -86,7 +87,7 @@ def makeGGGDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=
 
 
 
-######################### function 
+######################### function  makeLLDDModel ()
 # 2 lstm  layers  with dropout=0.1 ,  and recurrent_dropout = 0.5 ,
 #  2 dense layers more than the dense layer for predicted_var
 def makeLLDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=64 ,
@@ -178,6 +179,10 @@ def makeGRU2Model(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001):
 
 
 ######################### function makeGRU1Model ()
+# 1 gru layer with 32 units
+# This is the  first recurrent baseline from  the book
+# 6.3-advanced-usage-of-recurrent-neural-networks.py
+
 def makeGRU1Model(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001):
     source = Input(shape=(TSLen, nbOfFeat),
                    batch_size=batch_size,
