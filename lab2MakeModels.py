@@ -26,7 +26,8 @@ from tensorflow.python.keras.layers import Input, LSTM, GRU , Bidirectional, Den
 
 
 ######################### function makeGGDDModel ()
-# 2 gru layers   with dropout=0.1 ,  and recurrent_dropout = 0.5  , 2 dense layers 
+# 2 gru layers   with dropout=0.1 ,  and recurrent_dropout = 0.5   
+#  2 dense layers  more than the dense layer for predicted_var
 def makeGGDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=64 ,
                   d1=32,d2=64 ):
     source = Input(shape=(TSLen, nbOfFeat),
@@ -53,21 +54,21 @@ def makeGGDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=6
 
 
 ######################### function makeGGGDDModel ()
-# 3 gru layers   with dropout=0.1 ,  and recurrent_dropout = 0.5 ,
+# 3 gru layers   with dropout=theDrop ,  and recurrent_dropout = 0.5 ,
 #  2 dense layers  more than the dense layer for predicted_var
 def makeGGGDDModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32 , u2=64 ,u3=64 ,
-                  d1=32,d2=64 ):
+                  d1=32,d2=64 , theDrop=0.1 ):
     source = Input(shape=(TSLen, nbOfFeat),
                    batch_size=batch_size,
                    dtype=tf.float32, name='Input')
     gru1 = GRU(u1, name='GRU1' ,
-         dropout=0.1,  recurrent_dropout=0.5, 
+         dropout=theDrop,  recurrent_dropout=0.5, 
                return_sequences=True )(source)
     gru2 = GRU(u2, name='GRU2',
-               dropout=0.1,  recurrent_dropout=0.5 ,return_sequences=True  )(gru1)
+               dropout=theDrop,  recurrent_dropout=0.5 ,return_sequences=True  )(gru1)
 
     gru3 = GRU(u3, name='GRU3',
-               dropout=0.1,  recurrent_dropout=0.5  )(gru2)
+               dropout=theDrop,  recurrent_dropout=0.5  )(gru2)
     
     dense1 = Dense(d1, name='Dense1')(gru3)
     dense2 = Dense(d2, name='Dense2')(dense1)
@@ -155,7 +156,7 @@ def makeGRUGRUModel(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001 , u1=32, u2=
 
 ######################### function makeGRU2Model ()
 def makeGRU2Model(TSLen, nbOfFeat,  batch_size=None , lrPar=0.001):
-# 3 gru layers with dropout=0.1 ,  and recurrent_dropout = 0.5 ,
+# 2 gru layers with dropout=0.1 ,  and recurrent_dropout = 0.5 ,
 # the first gru has always  32 unit and one second  gru has always  64 units
     source = Input(shape=(TSLen, nbOfFeat),
                    batch_size=batch_size,
