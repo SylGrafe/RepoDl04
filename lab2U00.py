@@ -3,6 +3,7 @@
 # sygr0003 , UMU54907 , VT2019 , lab2 weather predictions
 # from 6.3-advanced-usage-of-recurrent-neural-networks.py
 # read data , preprocess the data and create generators
+#   instructions and comments: https://github.com/SylGrafe/RepoDl04/ lab2Sygr0003.pdf 
 import os
 from matplotlib import pyplot as plt
 import numpy as np
@@ -240,17 +241,14 @@ def getOneBatch (  min_index, max_index,
 ########################  diverse functions 
 def getValSteps ():
   float_data = getData ()
-  # This is how many steps to draw from `val_gen`
-  # in order to see the whole validation set:
+  # This is how many steps to draw from `val_gen` in order to see the whole validation set:
   # print ("DEBUG getValSteps () batch_size: " , batch_size) 
   val_steps = (300000 - 200001 - lookback) // batch_size
   return val_steps
 
 def getTestSteps ():
   float_data = getData ()
-
-  # This is how many steps to draw from `test_gen`
-  # in order to see the whole test set:
+  # This is how many steps to draw from `test_gen`  in order to see the whole test set:
   test_steps = (len(float_data) - 300001 - lookback) // batch_size
   return test_steps
 
@@ -621,7 +619,7 @@ if False:
 ############### main for test only
 ######################################################################
 
-if False :
+if True :
 
 
   import keras

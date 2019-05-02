@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # sygr0003 , UMU54907 , VT2019 , lab2 weather predictions
+#   instructions and comments: https://github.com/SylGrafe/RepoDl04/ lab2Sygr0003.pdf 
 # create models  
 import sys
 import keras

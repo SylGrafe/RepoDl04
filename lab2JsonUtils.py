@@ -1,6 +1,7 @@
 #!/usr/bin/python3.5
 # sygr0003 , UMU54907 , VT2019 , lab2 weather predictions
 # functions and class to save information about models and fit  in json file
+#   instructions and comments: https://github.com/SylGrafe/RepoDl04/ lab2Sygr0003.pdf 
 import sys
 import os
 import sys
