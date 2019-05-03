@@ -619,8 +619,8 @@ if False:
 ############### main for test only
 ######################################################################
 
-if True :
 
+if __name__ == "__main__":
 
   import keras
   keras.__version__
